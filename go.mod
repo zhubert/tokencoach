@@ -1,4 +1,4 @@
-module github.com/zhubert/insights
+module github.com/zhubert/tokencoach
 
 go 1.26.2
 

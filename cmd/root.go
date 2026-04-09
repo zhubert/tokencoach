@@ -7,8 +7,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:               "insights",
-	Short:             "Cost analytics for Claude Code sessions",
+	Use:               "tokencoach",
+	Short:             "AI-powered coaching for your Claude Code usage",
 	CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 }
 
@@ -19,5 +19,5 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(weekCmd)
+	rootCmd.AddCommand(statsCmd)
 }

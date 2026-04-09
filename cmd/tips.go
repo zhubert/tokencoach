@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/zhubert/insights/internal/claude"
+	"github.com/zhubert/tokencoach/internal/claude"
 )
 
 func startSpinner(msg string) func() {
@@ -40,7 +40,7 @@ var (
 
 var tipsCmd = &cobra.Command{
 	Use:   "tips",
-	Short: "AI-generated tips to reduce your Claude Code costs",
+	Short: "AI-generated tips to improve your sessions",
 	RunE:  runTips,
 }
 
