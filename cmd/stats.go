@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 	"github.com/zhubert/tokencoach/internal/claude"
 	"github.com/zhubert/tokencoach/internal/display"
@@ -108,6 +110,10 @@ func runStats(cmd *cobra.Command, args []string) error {
 	var totalCost float64
 	var totalSessions int
 
+	labelStyle := lipgloss.NewStyle().Bold(true)
+	costStyle := lipgloss.NewStyle().Foreground(display.ColorAccent)
+	dimStyle := lipgloss.NewStyle().Foreground(display.ColorDim)
+
 	fmt.Printf("\n")
 	dayNames := []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
 	for i := 0; i < daysInPeriod; i++ {
@@ -122,34 +128,47 @@ func runStats(cmd *cobra.Command, args []string) error {
 			label = dayNames[int(date.Weekday())]
 		}
 
+		styledLabel := labelStyle.Render(fmt.Sprintf("%-6s", label))
+
 		if d != nil {
 			bar := display.Bar(d.cost, maxCost, 20)
 			sessLabel := "sessions"
 			if d.sessions == 1 {
 				sessLabel = "session "
 			}
-			fmt.Printf("  %s  %s  %7s  (%3d %s, %6s tokens)\n",
-				label, bar, display.FormatCost(d.cost), d.sessions, sessLabel, display.FormatTokens(d.tokens))
+			styledCost := costStyle.Render(fmt.Sprintf("%7s", display.FormatCost(d.cost)))
+			meta := dimStyle.Render(fmt.Sprintf("(%3d %s, %6s tokens)", d.sessions, sessLabel, display.FormatTokens(d.tokens)))
+			fmt.Printf("  %s %s  %s  %s\n", styledLabel, bar, styledCost, meta)
 			totalCost += d.cost
 			totalSessions += d.sessions
 		} else {
 			bar := display.Bar(0, maxCost, 20)
-			fmt.Printf("  %s  %s  %7s\n", label, bar, "$0.00")
+			styledCost := dimStyle.Render(fmt.Sprintf("%7s", "$0.00"))
+			fmt.Printf("  %s %s  %s\n", styledLabel, bar, styledCost)
 		}
 	}
 
-	fmt.Printf("\n")
+	fmt.Println()
 	if totalSessions > 0 {
 		periodAvgSession := totalCost / float64(totalSessions)
 		periodAvgDaily := totalCost / float64(daysInPeriod)
 
-		fmt.Printf("  Total:       %s across %d sessions\n", display.FormatCost(totalCost), totalSessions)
-		fmt.Printf("  Avg/session: %s", display.FormatCost(periodAvgSession))
-		fmt.Printf("  (historical: %s)\n", display.FormatCost(histAvgSession))
-		fmt.Printf("  Avg/day:     %s", display.FormatCost(periodAvgDaily))
-		fmt.Printf("  (historical: %s)\n", display.FormatCost(histAvgDaily))
+		w := display.GetTermWidth()
+		boxWidth := w - 4
+		if boxWidth > 50 {
+			boxWidth = 50
+		}
+
+		lines := []string{
+			fmt.Sprintf("Total:       %s across %d sessions", display.FormatCost(totalCost), totalSessions),
+			fmt.Sprintf("Avg/session: %s  %s", display.FormatCost(periodAvgSession),
+				dimStyle.Render(fmt.Sprintf("(historical: %s)", display.FormatCost(histAvgSession)))),
+			fmt.Sprintf("Avg/day:     %s  %s", display.FormatCost(periodAvgDaily),
+				dimStyle.Render(fmt.Sprintf("(historical: %s)", display.FormatCost(histAvgDaily)))),
+		}
+		fmt.Println(display.RoundedBox(strings.Join(lines, "\n"), boxWidth))
 	}
-	fmt.Printf("\n")
+	fmt.Println()
 
 	return nil
 }

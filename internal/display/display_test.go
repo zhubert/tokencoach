@@ -60,9 +60,9 @@ func TestBar(t *testing.T) {
 		{0.01, 10, 10, "█░░░░░░░░░"}, // tiny positive still gets 1 filled
 	}
 	for _, tt := range tests {
-		got := Bar(tt.value, tt.max, tt.width)
+		got := PlainBar(tt.value, tt.max, tt.width)
 		if got != tt.want {
-			t.Errorf("Bar(%v, %v, %d) = %q, want %q", tt.value, tt.max, tt.width, got, tt.want)
+			t.Errorf("PlainBar(%v, %v, %d) = %q, want %q", tt.value, tt.max, tt.width, got, tt.want)
 		}
 	}
 }

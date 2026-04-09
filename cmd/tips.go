@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 	"github.com/zhubert/tokencoach/internal/claude"
+	"github.com/zhubert/tokencoach/internal/display"
 )
 
 func startSpinner(msg string) func() {
@@ -34,25 +36,43 @@ func startSpinner(msg string) func() {
 }
 
 func printBox(title string, lines []string) {
-	maxLen := 0
-	for _, l := range lines {
-		if len(l) > maxLen {
-			maxLen = len(l)
-		}
-	}
-	innerWidth := maxLen + 4
-	titleMin := len(title) + 4
-	if titleMin > innerWidth {
-		innerWidth = titleMin
+	w := display.GetTermWidth()
+	boxWidth := w - 4
+	if boxWidth > 60 {
+		boxWidth = 60
 	}
 
-	titlePart := "─ " + title + " "
-	fmt.Printf("  ╭%s%s╮\n", titlePart, strings.Repeat("─", innerWidth-len(titlePart)))
-	for _, l := range lines {
-		content := "  " + l
-		fmt.Printf("  │%s%s│\n", content, strings.Repeat(" ", innerWidth-len(content)))
+	titleLine := lipgloss.NewStyle().Bold(true).Foreground(display.ColorAccent).Render(title)
+	content := titleLine + "\n" + strings.Join(lines, "\n")
+
+	fmt.Println(display.RoundedBox(content, boxWidth))
+}
+
+type sessionTip struct {
+	Header      string `json:"header"`
+	Description string `json:"description"`
+	Metrics     string `json:"metrics"`
+	Tip         string `json:"tip"`
+}
+
+func renderSessionBlock(s sessionTip) string {
+	w := display.GetTermWidth()
+	blockWidth := w - 4
+	if blockWidth > 76 {
+		blockWidth = 76
 	}
-	fmt.Printf("  ╰%s╯\n", strings.Repeat("─", innerWidth))
+
+	header := lipgloss.NewStyle().Bold(true).Foreground(display.ColorAccent).MarginLeft(2).Render(s.Header)
+
+	metricsLine := lipgloss.NewStyle().Foreground(display.ColorDim).Render(s.Metrics)
+	tipLine := lipgloss.NewStyle().Bold(true).Foreground(display.ColorTip).Render("Tip: ") +
+		lipgloss.NewStyle().Foreground(display.ColorTip).Render(s.Tip)
+
+	content := s.Description + "\n" + metricsLine + "\n" + tipLine
+
+	box := display.RoundedBox(content, blockWidth)
+
+	return header + "\n" + box
 }
 
 var (
@@ -223,12 +243,13 @@ Patterns to look for:
 - Sessions with many turns but low output tokens (spinning wheels)
 - Sessions that cost much more than this user's historical average
 
-You MUST use this exact format for each session. Output 2-3 of these blocks separated by blank lines. Do not output anything else — no preamble, no summary, just the blocks:
+Return a JSON array of 2-3 objects. Each object must have these exact fields:
+- "header": cost, day/time, and project on one line (e.g. "$16.53  Thu 9:14am  ~/Code/insights")
+- "description": what they were doing, from the summary field
+- "metrics": key metrics showing the problem, with specific numbers compared to baseline
+- "tip": one concrete, actionable sentence
 
-  ┌ $[Cost] · [Day] [Time] · [Project]
-  │ [What they were doing, from the summary field]
-  │ [Key metrics showing the problem, with specific numbers compared to baseline]
-  └ Tip: [One concrete, actionable sentence]
+Return ONLY valid JSON. No markdown fences, no preamble, no other text.
 
 <data>
 %s
@@ -267,6 +288,27 @@ You MUST use this exact format for each session. Output 2-3 of these blocks sepa
 	fmt.Printf("  Analyzed sessions in %s\n\n", elapsed)
 	printBox(boxTitle, boxLines)
 	fmt.Println()
-	fmt.Print(string(out))
+
+	// Strip markdown fences if present
+	raw := strings.TrimSpace(string(out))
+	if strings.HasPrefix(raw, "```") {
+		if i := strings.Index(raw, "\n"); i != -1 {
+			raw = raw[i+1:]
+		}
+		if strings.HasSuffix(raw, "```") {
+			raw = raw[:len(raw)-3]
+		}
+		raw = strings.TrimSpace(raw)
+	}
+
+	var tips []sessionTip
+	if err := json.Unmarshal([]byte(raw), &tips); err != nil {
+		fmt.Print(string(out))
+		return nil
+	}
+	for _, tip := range tips {
+		fmt.Println(renderSessionBlock(tip))
+		fmt.Println()
+	}
 	return nil
 }
