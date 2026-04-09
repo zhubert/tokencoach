@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -92,7 +93,13 @@ func runTips(cmd *cobra.Command, args []string) error {
 	// Pull all sessions for historical baseline
 	allSessions, err := claude.AllSessions()
 	if err != nil {
-		return fmt.Errorf("reading sessions: %w", err)
+		fmt.Println("No Claude Code session data found. Use Claude Code first, then try again.")
+		return nil
+	}
+
+	if len(allSessions) == 0 {
+		fmt.Println("No Claude Code sessions found. Use Claude Code first, then try again.")
+		return nil
 	}
 
 	// Filter to the requested window
@@ -227,10 +234,15 @@ You MUST use this exact format. No other format is acceptable:
 	out, err := c.Output()
 	elapsed := time.Since(start).Round(time.Millisecond)
 	stop()
-	fmt.Printf("  Analyzed sessions in %s\n\n", elapsed)
 	if err != nil {
-		return fmt.Errorf("claude: %w", err)
+		if errors.Is(err, exec.ErrNotFound) {
+			fmt.Println("  Claude CLI not found. Install it from https://docs.anthropic.com/en/docs/claude-code")
+		} else {
+			fmt.Printf("  Failed to get tips from Claude (%s model). Check your API key and try again.\n", tipsModel)
+		}
+		return nil
 	}
+	fmt.Printf("  Analyzed sessions in %s\n\n", elapsed)
 	fmt.Print(string(out))
 	return nil
 }

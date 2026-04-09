@@ -22,7 +22,13 @@ func runWeek(cmd *cobra.Command, args []string) error {
 
 	sessions, err := claude.SessionsSince(weekStart)
 	if err != nil {
-		return fmt.Errorf("reading sessions: %w", err)
+		fmt.Println("No Claude Code session data found. Use Claude Code first, then try again.")
+		return nil
+	}
+
+	if len(sessions) == 0 {
+		fmt.Print("\n  No sessions this week.\n\n")
+		return nil
 	}
 
 	type dayStats struct {
