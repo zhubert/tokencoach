@@ -1,6 +1,6 @@
 BINARY := tokencoach
 
-.PHONY: build test clean release
+.PHONY: build test clean
 
 build:
 	go build -o $(BINARY) .
@@ -11,6 +11,3 @@ test:
 clean:
 	rm -f $(BINARY)
 	rm -rf dist/
-
-release:
-	goreleaser release --clean
