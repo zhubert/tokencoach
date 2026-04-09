@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -30,6 +31,28 @@ func startSpinner(msg string) func() {
 		}
 	}()
 	return func() { close(done) }
+}
+
+func printBox(title string, lines []string) {
+	maxLen := 0
+	for _, l := range lines {
+		if len(l) > maxLen {
+			maxLen = len(l)
+		}
+	}
+	innerWidth := maxLen + 4
+	titleMin := len(title) + 4
+	if titleMin > innerWidth {
+		innerWidth = titleMin
+	}
+
+	titlePart := "─ " + title + " "
+	fmt.Printf("  ╭%s%s╮\n", titlePart, strings.Repeat("─", innerWidth-len(titlePart)))
+	for _, l := range lines {
+		content := "  " + l
+		fmt.Printf("  │%s%s│\n", content, strings.Repeat(" ", innerWidth-len(content)))
+	}
+	fmt.Printf("  ╰%s╯\n", strings.Repeat("─", innerWidth))
 }
 
 var (
@@ -189,7 +212,7 @@ func runTips(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("marshaling summary: %w", err)
 	}
 
-	prompt := fmt.Sprintf(`You are a cost advisor for AI coding sessions. Given session analytics from the past %d days plus a historical baseline, identify 2-3 actionable tips to reduce costs.
+	prompt := fmt.Sprintf(`You are a cost advisor for AI coding sessions. Given session analytics from the past %d days plus a historical baseline, identify 2-3 sessions with actionable tips to reduce costs.
 
 Use the historical baseline to judge what's normal vs abnormal for this user.
 
@@ -200,33 +223,32 @@ Patterns to look for:
 - Sessions with many turns but low output tokens (spinning wheels)
 - Sessions that cost much more than this user's historical average
 
-You MUST use this exact format. No other format is acceptable:
+You MUST use this exact format for each session. Output 2-3 of these blocks separated by blank lines. Do not output anything else — no preamble, no summary, just the blocks:
 
-[one line comparing this period vs historical baseline]
-
----
-
-[Day] [Time] — [Project] — $[Cost]
-[What they were doing, from the summary field]
-[The problem pattern you identified, with specific numbers]
-> Tip: [One concrete, actionable sentence]
-
----
-
-[Day] [Time] — [Project] — $[Cost]
-[What they were doing, from the summary field]
-[The problem pattern you identified, with specific numbers]
-> Tip: [One concrete, actionable sentence]
-
----
-
-[repeat for each tip, 2-3 total]
+  ┌ $[Cost] · [Day] [Time] · [Project]
+  │ [What they were doing, from the summary field]
+  │ [Key metrics showing the problem, with specific numbers compared to baseline]
+  └ Tip: [One concrete, actionable sentence]
 
 <data>
 %s
 </data>`, tipsDays, string(data))
 
-	// Show spinner while waiting for Haiku
+	// Compute summary box
+	boxTitle := fmt.Sprintf("%d-Day Summary", tipsDays)
+	boxLines := []string{
+		fmt.Sprintf("Spend: $%.2f (%d sessions)", periodCost, len(sessions)),
+		fmt.Sprintf("Avg:   $%.2f/session (baseline: $%.2f)", summary.AvgSessionCost, hist.AvgSessionCost),
+	}
+	if len(sorted) >= 2 && periodCost > 0 {
+		top2Cost := sorted[0].Cost + sorted[1].Cost
+		pct := (top2Cost / periodCost) * 100
+		if pct >= 15 {
+			boxLines = append(boxLines, fmt.Sprintf("Top 2 sessions = $%.2f (%.0f%% of total)", top2Cost, pct))
+		}
+	}
+
+	// Show spinner while waiting
 	fmt.Println()
 	start := time.Now()
 	stop := startSpinner("Analyzing sessions")
@@ -243,6 +265,8 @@ You MUST use this exact format. No other format is acceptable:
 		return nil
 	}
 	fmt.Printf("  Analyzed sessions in %s\n\n", elapsed)
+	printBox(boxTitle, boxLines)
+	fmt.Println()
 	fmt.Print(string(out))
 	return nil
 }

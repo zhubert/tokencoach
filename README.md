@@ -50,26 +50,20 @@ $ tokencoach tips
 
   Analyzed sessions in 4.2s
 
-This week you averaged $3.76/session vs. $9.64 historically — nice improvement,
-but three sessions drove cost well above average.
+  ╭─ 7-Day Summary ──────────────────────────────────╮
+  │  Spend: $67.75 (18 sessions)                      │
+  │  Avg:   $3.76/session (baseline: $9.64)           │
+  ╰───────────────────────────────────────────────────╯
 
----
+  ┌ $49.59 · Thu 9:14am · ~/Code/tools
+  │ Building a complementary CLI tool concept
+  │ 280 turns · 705% context growth · 92 Bash, 56 Edit, 29 Read calls
+  └ Tip: Synthesize findings after 3-4 exploratory rounds instead of cycling.
 
-Wed 1:14pm — ~/Code/myapp — $8.40
-Changing all TTLs to six months
-10 errors (vs. your 1.76 avg) with 94 turns but only 12,949 output tokens —
-stuck in a retry loop where commands failed repeatedly.
-> Tip: Split large refactoring tasks into smaller, independently testable
-> chunks so errors surface before chaining into the next operation.
-
----
-
-Thu 9:14am — ~/Code/tools — $49.59
-Building a complementary CLI tool concept
-280 turns with 705% context growth — cycled through 92 Bash, 56 Edit, 29 Read
-calls without consolidating findings.
-> Tip: Use Agent to synthesize findings into a recommendation after 3-4
-> exploratory rounds, rather than continuing to cycle through Read/Grep/Edit.
+  ┌ $8.40 · Wed 1:14pm · ~/Code/myapp
+  │ Changing all TTLs to six months
+  │ 94 turns · 10 errors (5.7× avg) · only 12,949 output tokens
+  └ Tip: Split large refactors into smaller, independently testable chunks.
 ```
 
 Flags:
