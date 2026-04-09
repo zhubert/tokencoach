@@ -25,14 +25,17 @@ Daily cost breakdown with historical comparison. Shows a bar chart of spending p
 ```
 $ tokencoach stats
 
-  Sun  ░░░░░░░░░░░░░░░░░░░░    $0.00
-  Mon  ████████████░░░░░░░░  $12.34  ( 8 sessions, 450.2k tokens)
-  Tue  ████████████████████  $18.50  (12 sessions, 820.1k tokens)
-  Wed  ██████░░░░░░░░░░░░░░   $6.20  ( 4 sessions, 210.0k tokens)
+  Sun    ░░░░░░░░░░░░░░░░░░░░    $0.00
+  Mon    █░░░░░░░░░░░░░░░░░░░    $1.30  (  2 sessions,   1.1M tokens)
+  Tue    ░░░░░░░░░░░░░░░░░░░░    $0.00
+  Wed    █░░░░░░░░░░░░░░░░░░░    $3.40  (  3 sessions,   4.0M tokens)
+  Thu    ████████████████████   $39.17  ( 44 sessions,  45.6M tokens)
 
-  Total:       $37.04 across 24 sessions
-  Avg/session: $1.54  (historical: $1.32)
-  Avg/day:     $9.26  (historical: $8.15)
+  ╭────────────────────────────────────────────────╮
+  │  Total:         $43.87 across 49 sessions      │
+  │  Avg/session:    $0.90 (historical:    $3.13)  │
+  │  Avg/day:        $8.77 (historical:   $40.33)  │
+  ╰────────────────────────────────────────────────╯
 ```
 
 Use `--days N` to look back further than the current week:
@@ -48,22 +51,43 @@ AI-generated tips to reduce your costs. Analyzes your most expensive recent sess
 ```
 $ tokencoach tips
 
-  Analyzed sessions in 4.2s
+  ⠼ Analyzing sessions......25.501s
 
-  ╭─ 7-Day Summary ──────────────────────────────────╮
-  │  Spend: $67.75 (18 sessions)                      │
-  │  Avg:   $3.76/session (baseline: $9.64)           │
-  ╰───────────────────────────────────────────────────╯
+                               7-Day Summary
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │  Spend: $46.57 (49 sessions)                                            │
+  │  Avg:   $0.95/session (baseline: $3.14)                                 │
+  │  Top 2 sessions = $21.72 (47% of total)                                 │
+  ╰──────────────────────────────────────────────────────────────────────────╯
 
-  ┌ $49.59 · Thu 9:14am · ~/Code/tools
-  │ Building a complementary CLI tool concept
-  │ 280 turns · 705% context growth · 92 Bash, 56 Edit, 29 Read calls
-  └ Tip: Synthesize findings after 3-4 exploratory rounds instead of cycling.
+                    $16.53  Thu 9:14am  ~/Code/insights
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │  Building a CLI tool — session was interrupted mid-flow after extensive  │
+  │  development work                                                       │
+  │                                                                         │
+  │  280 turns (5.5x your avg of 51), 705% context growth, $16.53 (5.3x    │
+  │  your avg session cost of $3.14), 92 Bash + 56 Edit + 29 Read tool     │
+  │  calls                                                                  │
+  │                                                                         │
+  │  Tip: When context grows past ~300%, start a fresh session with a       │
+  │  focused prompt summarizing only what's needed next — carrying 705%     │
+  │  accumulated context through 280 turns multiplied the cost              │
+  │  dramatically.                                                          │
+  ╰──────────────────────────────────────────────────────────────────────────╯
 
-  ┌ $8.40 · Wed 1:14pm · ~/Code/myapp
-  │ Changing all TTLs to six months
-  │ 94 turns · 10 errors (5.7× avg) · only 12,949 output tokens
-  └ Tip: Split large refactors into smaller, independently testable chunks.
+                      $2.80  Wed 1:14pm  ~/Code/perry
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │  Changing all TTLs to six months — a well-scoped task that nonetheless  │
+  │  ran long                                                               │
+  │                                                                         │
+  │  10 errors (6x your avg of 1.68), 94 turns but only 12,949 output      │
+  │  tokens (~138 tokens/turn vs your typical 300+), suggesting repeated    │
+  │  failed attempts rather than productive output                          │
+  │                                                                         │
+  │  Tip: When error count spikes above 5, stop and diagnose the root      │
+  │  cause manually before continuing — letting the agent retry 10 times    │
+  │  compounds token cost without fixing the underlying issue.              │
+  ╰──────────────────────────────────────────────────────────────────────────╯
 ```
 
 Flags:
