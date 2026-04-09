@@ -36,6 +36,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 		since = today.AddDate(0, 0, -int(today.Weekday()))
 		daysInPeriod = int(today.Weekday()) + 1
 	}
+	debug("stats: period=%s to %s (%d days)", since.Format("2006-01-02"), today.Format("2006-01-02"), daysInPeriod)
 
 	// Pull all sessions for historical baseline
 	allSessions, err := claude.AllSessions()
@@ -43,6 +44,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 		fmt.Println("No Claude Code session data found. Use Claude Code first, then try again.")
 		return nil
 	}
+	debug("stats: loaded %d total sessions", len(allSessions))
 
 	if len(allSessions) == 0 {
 		fmt.Println("No Claude Code sessions found. Use Claude Code first, then try again.")
@@ -56,6 +58,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 			sessions = append(sessions, s)
 		}
 	}
+	debug("stats: %d sessions in period", len(sessions))
 
 	if len(sessions) == 0 {
 		if statsDays > 0 {

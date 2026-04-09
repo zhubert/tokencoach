@@ -50,13 +50,19 @@ func renderBox(title string, lines []string) string {
 }
 
 type sessionTip struct {
-	Header      string `json:"header"`
-	Description string `json:"description"`
-	Metrics     string `json:"metrics"`
-	Tip         string `json:"tip"`
+	SessionIndex int    `json:"session_index"`
+	Header       string `json:"header"`
+	Description  string `json:"description"`
+	Metrics      string `json:"metrics"`
+	Tip          string `json:"tip"`
 }
 
-func renderSessionBlock(s sessionTip) string {
+type promptMatch struct {
+	Quote   string `json:"quote"`
+	Better  string `json:"better"`
+}
+
+func renderSessionBlock(s sessionTip, pm *promptMatch) string {
 	w := display.GetTermWidth()
 	blockWidth := w - 4
 	if blockWidth > 76 {
@@ -70,6 +76,12 @@ func renderSessionBlock(s sessionTip) string {
 		lipgloss.NewStyle().Foreground(display.ColorTip).Render(s.Tip)
 
 	content := s.Description + "\n" + metricsLine + "\n" + tipLine
+
+	if pm != nil && pm.Quote != "" {
+		quoteLine := lipgloss.NewStyle().Foreground(display.ColorDim).Padding(1, 0, 0, 0).Render("You wrote: \"" + pm.Quote + "\"")
+		betterLine := lipgloss.NewStyle().Foreground(display.ColorTip).Render("Better: \"" + pm.Better + "\"")
+		content += "\n" + quoteLine + "\n" + betterLine
+	}
 
 	box := display.RoundedBox(content, blockWidth)
 
@@ -89,6 +101,7 @@ var tipsCmd = &cobra.Command{
 }
 
 type sessionSummary struct {
+	Index            int            `json:"index"`
 	Time             string         `json:"time"`
 	Project          string         `json:"project"`
 	Summary          string         `json:"summary"`
@@ -140,6 +153,7 @@ func runTips(cmd *cobra.Command, args []string) error {
 		fmt.Println("No Claude Code session data found. Use Claude Code first, then try again.")
 		return nil
 	}
+	debug("tips: loaded %d total sessions", len(allSessions))
 
 	if len(allSessions) == 0 {
 		fmt.Println("No Claude Code sessions found. Use Claude Code first, then try again.")
@@ -153,6 +167,7 @@ func runTips(cmd *cobra.Command, args []string) error {
 			sessions = append(sessions, s)
 		}
 	}
+	debug("tips: %d sessions in %d-day window", len(sessions), tipsDays)
 
 	if len(sessions) == 0 {
 		fmt.Printf("No sessions in the last %d days.\n", tipsDays)
@@ -207,13 +222,15 @@ func runTips(cmd *cobra.Command, args []string) error {
 		sorted = sorted[:tipsTop]
 	}
 
-	for _, s := range sorted {
+	for i, s := range sorted {
 		growthPct := 0
 		if s.FirstInputSize > 0 {
 			growthPct = ((s.LastInputSize - s.FirstInputSize) * 100) / s.FirstInputSize
 		}
+		debug("tips: session[%d] %s $%.2f %d turns %d prompts", i, s.Project, s.Cost, s.Turns, len(s.UserPrompts))
 
 		summary.Sessions = append(summary.Sessions, sessionSummary{
+			Index:            i,
 			Time:             s.StartTime.Local().Format("Mon 3:04pm"),
 			Project:          s.Project,
 			Summary:          s.Summary,
@@ -232,6 +249,7 @@ func runTips(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("marshaling summary: %w", err)
 	}
+	debug("tips: pass1 payload size=%d bytes", len(data))
 
 	prompt := fmt.Sprintf(`You are a cost advisor for AI coding sessions. Given session analytics from the past %d days plus a historical baseline, identify 2-3 sessions with actionable tips to reduce costs.
 
@@ -245,6 +263,7 @@ Patterns to look for:
 - Sessions that cost much more than this user's historical average
 
 Return a JSON array of 2-3 objects. Each object must have these exact fields:
+- "session_index": the index field from the session you're referencing
 - "header": cost, day/time, and project on one line (e.g. "$16.53  Thu 9:14am  ~/Code/insights")
 - "description": what they were doing, from the summary field
 - "metrics": key metrics showing the problem, with specific numbers compared to baseline
@@ -286,9 +305,8 @@ Return ONLY valid JSON. No markdown fences, no preamble, no other text.
 		}
 		return nil
 	}
-	fmt.Printf("%s\n\n", elapsed)
-	fmt.Println(renderBox(boxTitle, boxLines))
-	fmt.Println()
+	debug("tips: pass1 completed in %s, response size=%d bytes", elapsed, len(out))
+	fmt.Printf("%s\n", elapsed)
 
 	// Strip markdown fences if present
 	raw := strings.TrimSpace(string(out))
@@ -304,12 +322,117 @@ Return ONLY valid JSON. No markdown fences, no preamble, no other text.
 
 	var tips []sessionTip
 	if err := json.Unmarshal([]byte(raw), &tips); err != nil {
+		debug("tips: pass1 JSON parse error: %v", err)
+		debug("tips: pass1 raw output: %s", raw)
 		fmt.Print(string(out))
 		return nil
 	}
-	for _, tip := range tips {
-		fmt.Println(renderSessionBlock(tip))
+	for i, t := range tips {
+		debug("tips: pass1 tip[%d] session_index=%d header=%q", i, t.SessionIndex, t.Header)
+	}
+
+	// Pass 2: for each tip, find the exemplifying user prompt
+	start = time.Now()
+	stop = startSpinner("Finding example prompts")
+	type indexedMatch struct {
+		idx int
+		pm  *promptMatch
+	}
+	matchCh := make(chan indexedMatch, len(tips))
+
+	for i, tip := range tips {
+		go func(idx int, t sessionTip) {
+			pm := findExamplePrompt(t, sorted, tipsModel)
+			matchCh <- indexedMatch{idx, pm}
+		}(i, tip)
+	}
+
+	matches := make([]*promptMatch, len(tips))
+	for range tips {
+		im := <-matchCh
+		matches[im.idx] = im.pm
+	}
+	elapsed = time.Since(start).Round(time.Millisecond)
+	stop()
+	fmt.Printf("%s\n\n", elapsed)
+
+	fmt.Println(renderBox(boxTitle, boxLines))
+	fmt.Println()
+
+	for i, tip := range tips {
+		fmt.Println(renderSessionBlock(tip, matches[i]))
 		fmt.Println()
 	}
 	return nil
+}
+
+func truncateDebug(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}
+
+func findExamplePrompt(tip sessionTip, sorted []*claude.Session, model string) *promptMatch {
+	if tip.SessionIndex < 0 || tip.SessionIndex >= len(sorted) {
+		debug("pass2: session_index %d out of range (have %d sessions)", tip.SessionIndex, len(sorted))
+		return nil
+	}
+	sess := sorted[tip.SessionIndex]
+	if len(sess.UserPrompts) == 0 {
+		debug("pass2: session[%d] has no user prompts", tip.SessionIndex)
+		return nil
+	}
+	debug("pass2: session[%d] sending %d prompts to model", tip.SessionIndex, len(sess.UserPrompts))
+
+	promptsJSON, err := json.Marshal(sess.UserPrompts)
+	if err != nil {
+		return nil
+	}
+	debug("pass2: session[%d] prompt payload size=%d bytes", tip.SessionIndex, len(promptsJSON))
+
+	p := fmt.Sprintf(`Given this tip about an AI coding session and the user's actual prompts from that session, pick the single prompt that best exemplifies the problem described in the tip. Then write a better version of that prompt that would have avoided the waste.
+
+<tip>%s</tip>
+
+<metrics>%s</metrics>
+
+<user_prompts>
+%s
+</user_prompts>
+
+Return a JSON object with exactly two fields:
+- "quote": the exact text of the problematic prompt (copy it verbatim, but truncate to 200 chars if longer)
+- "better": a rewritten version of that prompt that would have been more efficient
+
+Return ONLY valid JSON. No markdown fences, no preamble.`, tip.Tip, tip.Metrics, string(promptsJSON))
+
+	c := exec.Command("claude", "-p", p, "--model", model)
+	var stderr strings.Builder
+	c.Stderr = &stderr
+	out, err := c.Output()
+	if err != nil {
+		debug("pass2: session[%d] claude error: %v stderr: %s", tip.SessionIndex, err, stderr.String())
+		return nil
+	}
+	debug("pass2: session[%d] response size=%d bytes", tip.SessionIndex, len(out))
+
+	raw := strings.TrimSpace(string(out))
+	if strings.HasPrefix(raw, "```") {
+		if i := strings.Index(raw, "\n"); i != -1 {
+			raw = raw[i+1:]
+		}
+		if strings.HasSuffix(raw, "```") {
+			raw = raw[:len(raw)-3]
+		}
+		raw = strings.TrimSpace(raw)
+	}
+
+	var pm promptMatch
+	if err := json.Unmarshal([]byte(raw), &pm); err != nil {
+		debug("pass2: session[%d] JSON parse error: %v raw: %s", tip.SessionIndex, err, raw)
+		return nil
+	}
+	debug("pass2: session[%d] matched quote=%q", tip.SessionIndex, truncateDebug(pm.Quote, 80))
+	return &pm
 }

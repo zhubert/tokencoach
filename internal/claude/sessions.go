@@ -48,6 +48,7 @@ type Session struct {
 	FirstInputSize int
 	LastInputSize  int
 	Summary        string
+	UserPrompts    []string
 }
 
 func ClaudeDir() string {
@@ -192,8 +193,11 @@ func parseUserEntry(line []byte, sess *Session) {
 	// Content can be a string or an array
 	var contentStr string
 	if json.Unmarshal(raw.Message.Content, &contentStr) == nil {
-		if sess.Summary == "" && len(contentStr) > 5 && !strings.HasPrefix(contentStr, "[Request") {
-			sess.Summary = truncate(contentStr, 120)
+		if isUserPrompt(contentStr) {
+			if sess.Summary == "" {
+				sess.Summary = truncate(contentStr, 120)
+			}
+			sess.UserPrompts = append(sess.UserPrompts, truncate(contentStr, 200))
 		}
 		return
 	}
@@ -214,8 +218,11 @@ func parseUserEntry(line []byte, sess *Session) {
 			if strings.Contains(c.Text, "[Request interrupted by user") {
 				sess.Interruptions++
 			}
-			if sess.Summary == "" && len(c.Text) > 5 && !strings.HasPrefix(c.Text, "[Request") {
-				sess.Summary = truncate(c.Text, 120)
+			if isUserPrompt(c.Text) {
+				if sess.Summary == "" {
+					sess.Summary = truncate(c.Text, 120)
+				}
+				sess.UserPrompts = append(sess.UserPrompts, truncate(c.Text, 200))
 			}
 		case "tool_result":
 			if c.IsError {
@@ -223,6 +230,17 @@ func parseUserEntry(line []byte, sess *Session) {
 			}
 		}
 	}
+}
+
+func isUserPrompt(s string) bool {
+	if len(s) <= 5 {
+		return false
+	}
+	// Filter out system messages and non-human content
+	return !strings.HasPrefix(s, "[Request") &&
+		!strings.HasPrefix(s, "<local-command") &&
+		!strings.HasPrefix(s, "<task-notification") &&
+		!strings.HasPrefix(s, "<system-reminder")
 }
 
 func truncate(s string, max int) string {

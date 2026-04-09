@@ -105,6 +105,13 @@ func TestParseSession_Basic(t *testing.T) {
 		t.Errorf("Summary = %q, want %q", sess.Summary, "Help me refactor the auth module")
 	}
 
+	// Check user prompts captured
+	if len(sess.UserPrompts) != 1 {
+		t.Errorf("UserPrompts count = %d, want 1", len(sess.UserPrompts))
+	} else if sess.UserPrompts[0] != "Help me refactor the auth module" {
+		t.Errorf("UserPrompts[0] = %q, want %q", sess.UserPrompts[0], "Help me refactor the auth module")
+	}
+
 	// Check cost is computed
 	if sess.Cost <= 0 {
 		t.Errorf("Cost = %v, want > 0", sess.Cost)
@@ -153,6 +160,13 @@ func TestParseSession_ErrorsAndInterruptions(t *testing.T) {
 	// Summary should be first user message
 	if sess.Summary != "Fix the login bug" {
 		t.Errorf("Summary = %q, want %q", sess.Summary, "Fix the login bug")
+	}
+
+	// User prompts: only "Fix the login bug" — interruptions are filtered out
+	if len(sess.UserPrompts) != 1 {
+		t.Errorf("UserPrompts count = %d, want 1", len(sess.UserPrompts))
+	} else if sess.UserPrompts[0] != "Fix the login bug" {
+		t.Errorf("UserPrompts[0] = %q, want %q", sess.UserPrompts[0], "Fix the login bug")
 	}
 }
 
