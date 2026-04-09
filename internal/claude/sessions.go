@@ -18,29 +18,35 @@ type Usage struct {
 }
 
 type Message struct {
-	Model string `json:"model"`
-	Usage Usage  `json:"usage"`
+	Model   string          `json:"model"`
+	Usage   Usage           `json:"usage"`
+	Content json.RawMessage `json:"content"`
 }
 
 type Entry struct {
-	Type      string  `json:"type"`
-	Message   Message `json:"message"`
-	Timestamp string  `json:"timestamp"`
-	SessionID string  `json:"sessionId"`
-	CWD       string  `json:"cwd"`
-	Version   string  `json:"version"`
-	GitBranch string  `json:"gitBranch"`
+	Type      string          `json:"type"`
+	Message   Message         `json:"message"`
+	Timestamp string          `json:"timestamp"`
+	SessionID string          `json:"sessionId"`
+	CWD       string          `json:"cwd"`
+	Version   string          `json:"version"`
+	GitBranch string          `json:"gitBranch"`
 }
 
 type Session struct {
-	ID        string
-	Project   string
-	Model     string
-	StartTime time.Time
-	EndTime   time.Time
-	Usage     Usage
-	Turns     int
-	Cost      float64
+	ID             string
+	Project        string
+	Model          string
+	StartTime      time.Time
+	EndTime        time.Time
+	Usage          Usage
+	Turns          int
+	Cost           float64
+	Errors         int
+	Interruptions  int
+	ToolCounts     map[string]int
+	FirstInputSize int
+	LastInputSize  int
 }
 
 func ClaudeDir() string {
@@ -89,8 +95,9 @@ func ParseSession(path string) (*Session, error) {
 	projectName := projectDirToName(filepath.Dir(path))
 
 	sess := &Session{
-		ID:      sessionID,
-		Project: projectName,
+		ID:         sessionID,
+		Project:    projectName,
+		ToolCounts: make(map[string]int),
 	}
 
 	var firstTime, lastTime time.Time
@@ -99,8 +106,9 @@ func ParseSession(path string) (*Session, error) {
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	for scanner.Scan() {
+		line := scanner.Bytes()
 		var entry Entry
-		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+		if err := json.Unmarshal(line, &entry); err != nil {
 			continue
 		}
 
@@ -116,23 +124,35 @@ func ParseSession(path string) (*Session, error) {
 			}
 		}
 
-		if entry.Type != "assistant" {
-			continue
-		}
+		switch entry.Type {
+		case "assistant":
+			usage := entry.Message.Usage
+			if usage.InputTokens == 0 && usage.OutputTokens == 0 {
+				continue
+			}
 
-		usage := entry.Message.Usage
-		if usage.InputTokens == 0 && usage.OutputTokens == 0 {
-			continue
-		}
+			sess.Turns++
+			sess.Usage.InputTokens += usage.InputTokens
+			sess.Usage.OutputTokens += usage.OutputTokens
+			sess.Usage.CacheCreationInputTokens += usage.CacheCreationInputTokens
+			sess.Usage.CacheReadInputTokens += usage.CacheReadInputTokens
 
-		sess.Turns++
-		sess.Usage.InputTokens += usage.InputTokens
-		sess.Usage.OutputTokens += usage.OutputTokens
-		sess.Usage.CacheCreationInputTokens += usage.CacheCreationInputTokens
-		sess.Usage.CacheReadInputTokens += usage.CacheReadInputTokens
+			if sess.Model == "" && entry.Message.Model != "" {
+				sess.Model = entry.Message.Model
+			}
 
-		if sess.Model == "" && entry.Message.Model != "" {
-			sess.Model = entry.Message.Model
+			// Track context growth
+			inputSize := usage.InputTokens + usage.CacheReadInputTokens + usage.CacheCreationInputTokens
+			if sess.FirstInputSize == 0 {
+				sess.FirstInputSize = inputSize
+			}
+			sess.LastInputSize = inputSize
+
+			// Count tool uses
+			parseToolUses(entry.Message.Content, sess)
+
+		case "user":
+			parseUserEntry(line, sess)
 		}
 	}
 
@@ -141,6 +161,56 @@ func ParseSession(path string) (*Session, error) {
 	sess.Cost = ComputeCost(sess.Model, sess.Usage)
 
 	return sess, nil
+}
+
+func parseToolUses(raw json.RawMessage, sess *Session) {
+	var content []struct {
+		Type string `json:"type"`
+		Name string `json:"name"`
+	}
+	if json.Unmarshal(raw, &content) != nil {
+		return
+	}
+	for _, c := range content {
+		if c.Type == "tool_use" && c.Name != "" {
+			sess.ToolCounts[c.Name]++
+		}
+	}
+}
+
+func parseUserEntry(line []byte, sess *Session) {
+	// We need a flexible parse since user entries have varied shapes
+	var raw struct {
+		Message struct {
+			Content json.RawMessage `json:"content"`
+		} `json:"message"`
+	}
+	if json.Unmarshal(line, &raw) != nil {
+		return
+	}
+
+	var content []struct {
+		Type    string `json:"type"`
+		Text    string `json:"text"`
+		IsError bool   `json:"is_error"`
+		Content string `json:"content"`
+	}
+	if json.Unmarshal(raw.Message.Content, &content) != nil {
+		return
+	}
+
+	for _, c := range content {
+		switch c.Type {
+		case "text":
+			if strings.Contains(c.Text, "[Request interrupted by user") {
+				sess.Interruptions++
+			}
+		case "tool_result":
+			if c.IsError {
+				sess.Errors++
+			}
+		}
+	}
 }
 
 func AllSessions() ([]*Session, error) {
