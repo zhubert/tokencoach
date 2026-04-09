@@ -47,6 +47,7 @@ type Session struct {
 	ToolCounts     map[string]int
 	FirstInputSize int
 	LastInputSize  int
+	Summary        string
 }
 
 func ClaudeDir() string {
@@ -179,13 +180,21 @@ func parseToolUses(raw json.RawMessage, sess *Session) {
 }
 
 func parseUserEntry(line []byte, sess *Session) {
-	// We need a flexible parse since user entries have varied shapes
 	var raw struct {
 		Message struct {
 			Content json.RawMessage `json:"content"`
 		} `json:"message"`
 	}
 	if json.Unmarshal(line, &raw) != nil {
+		return
+	}
+
+	// Content can be a string or an array
+	var contentStr string
+	if json.Unmarshal(raw.Message.Content, &contentStr) == nil {
+		if sess.Summary == "" && len(contentStr) > 5 && !strings.HasPrefix(contentStr, "[Request") {
+			sess.Summary = truncate(contentStr, 120)
+		}
 		return
 	}
 
@@ -205,12 +214,22 @@ func parseUserEntry(line []byte, sess *Session) {
 			if strings.Contains(c.Text, "[Request interrupted by user") {
 				sess.Interruptions++
 			}
+			if sess.Summary == "" && len(c.Text) > 5 && !strings.HasPrefix(c.Text, "[Request") {
+				sess.Summary = truncate(c.Text, 120)
+			}
 		case "tool_result":
 			if c.IsError {
 				sess.Errors++
 			}
 		}
 	}
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
 }
 
 func AllSessions() ([]*Session, error) {
