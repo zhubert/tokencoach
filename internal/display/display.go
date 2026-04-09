@@ -9,14 +9,15 @@ import (
 	"golang.org/x/term"
 )
 
-// Shared color palette
+// Tokyo Night color palette
 var (
-	ColorBorder = lipgloss.Color("240")
-	ColorAccent = lipgloss.Color("75")  // steel blue — headers, titles
-	ColorDim    = lipgloss.Color("243") // gray — supporting detail
-	ColorTip    = lipgloss.Color("114") // green — tips, positive callouts
-	ColorBar    = lipgloss.Color("75")  // matches accent
-	ColorBarBg  = lipgloss.Color("237") // dark gray — empty bar
+	ColorBorder = lipgloss.Color("#565f89") // comment — visible border
+	ColorAccent = lipgloss.Color("#7aa2f7") // blue — headers, titles, costs
+	ColorDim    = lipgloss.Color("#a9b1d6") // foreground — body text, metrics
+	ColorTip    = lipgloss.Color("#bb9af7") // purple — tips, positive callouts
+	ColorWarn   = lipgloss.Color("#ff9e64") // orange — quoted problems, attention
+	ColorBar    = lipgloss.Color("#7aa2f7") // blue — bar fill
+	ColorBarBg  = lipgloss.Color("#292e42") // dark bg — empty bar
 )
 
 func GetTermWidth() int {

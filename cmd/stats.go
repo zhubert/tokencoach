@@ -163,11 +163,11 @@ func runStats(cmd *cobra.Command, args []string) error {
 		}
 
 		lines := []string{
-			fmt.Sprintf("Total:       %8s across %d sessions", display.FormatCost(totalCost), totalSessions),
-			fmt.Sprintf("Avg/session: %8s %s", display.FormatCost(periodAvgSession),
-				dimStyle.Render(fmt.Sprintf("(historical: %8s)", display.FormatCost(histAvgSession)))),
-			fmt.Sprintf("Avg/day:     %8s %s", display.FormatCost(periodAvgDaily),
-				dimStyle.Render(fmt.Sprintf("(historical: %8s)", display.FormatCost(histAvgDaily)))),
+			fmt.Sprintf("Total:       %s across %d sessions", costStyle.Render(fmt.Sprintf("%8s", display.FormatCost(totalCost))), totalSessions),
+			fmt.Sprintf("Avg/session: %s %s", costStyle.Render(fmt.Sprintf("%8s", display.FormatCost(periodAvgSession))),
+				dimStyle.Render(fmt.Sprintf("(historical: %s)", costStyle.Render(fmt.Sprintf("%8s", display.FormatCost(histAvgSession)))))),
+			fmt.Sprintf("Avg/day:     %s %s", costStyle.Render(fmt.Sprintf("%8s", display.FormatCost(periodAvgDaily))),
+				dimStyle.Render(fmt.Sprintf("(historical: %s)", costStyle.Render(fmt.Sprintf("%8s", display.FormatCost(histAvgDaily)))))),
 		}
 		fmt.Println(display.RoundedBox(strings.Join(lines, "\n"), boxWidth))
 	}

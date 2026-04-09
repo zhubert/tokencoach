@@ -78,7 +78,7 @@ func renderSessionBlock(s sessionTip, pm *promptMatch) string {
 	content := s.Description + "\n" + metricsLine + "\n" + tipLine
 
 	if pm != nil && pm.Quote != "" {
-		quoteLine := lipgloss.NewStyle().Foreground(display.ColorDim).Padding(1, 0, 0, 0).Render("You wrote: \"" + pm.Quote + "\"")
+		quoteLine := lipgloss.NewStyle().Foreground(display.ColorWarn).Padding(1, 0, 0, 0).Render("You wrote: \"" + pm.Quote + "\"")
 		betterLine := lipgloss.NewStyle().Foreground(display.ColorTip).Render("Better: \"" + pm.Better + "\"")
 		content += "\n" + quoteLine + "\n" + betterLine
 	}
@@ -277,15 +277,16 @@ Return ONLY valid JSON. No markdown fences, no preamble, no other text.
 
 	// Compute summary box
 	boxTitle := fmt.Sprintf("%d-Day Summary", tipsDays)
+	costHL := lipgloss.NewStyle().Foreground(display.ColorAccent)
 	boxLines := []string{
-		fmt.Sprintf("Spend: $%.2f (%d sessions)", periodCost, len(sessions)),
-		fmt.Sprintf("Avg:   $%.2f/session (baseline: $%.2f)", summary.AvgSessionCost, hist.AvgSessionCost),
+		fmt.Sprintf("Spend: %s (%d sessions)", costHL.Render(fmt.Sprintf("$%.2f", periodCost)), len(sessions)),
+		fmt.Sprintf("Avg:   %s/session (baseline: %s)", costHL.Render(fmt.Sprintf("$%.2f", summary.AvgSessionCost)), costHL.Render(fmt.Sprintf("$%.2f", hist.AvgSessionCost))),
 	}
 	if len(sorted) >= 2 && periodCost > 0 {
 		top2Cost := sorted[0].Cost + sorted[1].Cost
 		pct := (top2Cost / periodCost) * 100
 		if pct >= 15 {
-			boxLines = append(boxLines, fmt.Sprintf("Top 2 sessions = $%.2f (%.0f%% of total)", top2Cost, pct))
+			boxLines = append(boxLines, fmt.Sprintf("Top 2 sessions = %s (%.0f%% of total)", costHL.Render(fmt.Sprintf("$%.2f", top2Cost)), pct))
 		}
 	}
 
