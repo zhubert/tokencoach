@@ -10,7 +10,15 @@ type ModelPricing struct {
 }
 
 var pricing = map[string]ModelPricing{
-	"opus": {
+	// Opus 4.5+ ($5/$25)
+	"opus-new": {
+		InputPerMillion:       5.00,
+		OutputPerMillion:      25.00,
+		CacheReadPerMillion:   0.50,
+		CacheCreatePerMillion: 6.25,
+	},
+	// Opus 4, 4.1 ($15/$75)
+	"opus-legacy": {
 		InputPerMillion:       15.00,
 		OutputPerMillion:      75.00,
 		CacheReadPerMillion:   1.50,
@@ -22,7 +30,15 @@ var pricing = map[string]ModelPricing{
 		CacheReadPerMillion:   0.30,
 		CacheCreatePerMillion: 3.75,
 	},
-	"haiku": {
+	// Haiku 4.5+ ($1/$5)
+	"haiku-new": {
+		InputPerMillion:       1.00,
+		OutputPerMillion:      5.00,
+		CacheReadPerMillion:   0.10,
+		CacheCreatePerMillion: 1.25,
+	},
+	// Haiku 3.5 and earlier ($0.80/$4)
+	"haiku-legacy": {
 		InputPerMillion:       0.80,
 		OutputPerMillion:      4.00,
 		CacheReadPerMillion:   0.08,
@@ -34,9 +50,15 @@ func modelFamily(model string) string {
 	m := strings.ToLower(model)
 	switch {
 	case strings.Contains(m, "opus"):
-		return "opus"
+		if strings.Contains(m, "opus-4-5") || strings.Contains(m, "opus-4-6") {
+			return "opus-new"
+		}
+		return "opus-legacy"
 	case strings.Contains(m, "haiku"):
-		return "haiku"
+		if strings.Contains(m, "haiku-4") {
+			return "haiku-new"
+		}
+		return "haiku-legacy"
 	default:
 		return "sonnet"
 	}

@@ -10,10 +10,15 @@ func TestModelFamily(t *testing.T) {
 		model string
 		want  string
 	}{
-		{"claude-opus-4-20250514", "opus"},
+		{"claude-opus-4-6-20260401", "opus-new"},
+		{"claude-opus-4-5-20250514", "opus-new"},
+		{"claude-opus-4-20250514", "opus-legacy"},
+		{"claude-opus-4-1-20250514", "opus-legacy"},
 		{"claude-sonnet-4-20250514", "sonnet"},
-		{"claude-haiku-3-5-20241022", "haiku"},
-		{"CLAUDE-OPUS-4", "opus"},
+		{"claude-sonnet-4-6-20260401", "sonnet"},
+		{"claude-haiku-4-5-20251001", "haiku-new"},
+		{"claude-haiku-3-5-20241022", "haiku-legacy"},
+		{"CLAUDE-OPUS-4-6", "opus-new"},
 		{"some-unknown-model", "sonnet"}, // default
 		{"", "sonnet"},                   // empty defaults to sonnet
 	}
@@ -51,22 +56,52 @@ func TestComputeCost(t *testing.T) {
 			want:  15.00,
 		},
 		{
-			name:  "opus input only",
+			name:  "opus 4 input only",
 			model: "claude-opus-4-20250514",
 			usage: Usage{InputTokens: 1_000_000},
 			want:  15.00,
 		},
 		{
-			name:  "opus output only",
+			name:  "opus 4 output only",
 			model: "claude-opus-4-20250514",
 			usage: Usage{OutputTokens: 1_000_000},
 			want:  75.00,
 		},
 		{
-			name:  "haiku input only",
+			name:  "opus 4.6 input only",
+			model: "claude-opus-4-6-20260401",
+			usage: Usage{InputTokens: 1_000_000},
+			want:  5.00,
+		},
+		{
+			name:  "opus 4.6 output only",
+			model: "claude-opus-4-6-20260401",
+			usage: Usage{OutputTokens: 1_000_000},
+			want:  25.00,
+		},
+		{
+			name:  "opus 4.5 input only",
+			model: "claude-opus-4-5-20250514",
+			usage: Usage{InputTokens: 1_000_000},
+			want:  5.00,
+		},
+		{
+			name:  "haiku 3.5 input only",
 			model: "claude-haiku-3-5-20241022",
 			usage: Usage{InputTokens: 1_000_000},
 			want:  0.80,
+		},
+		{
+			name:  "haiku 4.5 input only",
+			model: "claude-haiku-4-5-20251001",
+			usage: Usage{InputTokens: 1_000_000},
+			want:  1.00,
+		},
+		{
+			name:  "haiku 4.5 output only",
+			model: "claude-haiku-4-5-20251001",
+			usage: Usage{OutputTokens: 1_000_000},
+			want:  5.00,
 		},
 		{
 			name:  "cache read",
