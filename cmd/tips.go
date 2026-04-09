@@ -35,17 +35,18 @@ func startSpinner(msg string) func() {
 	return func() { close(done) }
 }
 
-func printBox(title string, lines []string) {
+func renderBox(title string, lines []string) string {
 	w := display.GetTermWidth()
 	boxWidth := w - 4
-	if boxWidth > 60 {
-		boxWidth = 60
+	if boxWidth > 76 {
+		boxWidth = 76
 	}
 
-	titleLine := lipgloss.NewStyle().Bold(true).Foreground(display.ColorAccent).Render(title)
-	content := titleLine + "\n" + strings.Join(lines, "\n")
+	titleLine := lipgloss.NewStyle().Width(boxWidth).Bold(true).Foreground(display.ColorAccent).Align(lipgloss.Center).Render(title)
+	content := strings.Join(lines, "\n")
 
-	fmt.Println(display.RoundedBox(content, boxWidth))
+	box := display.RoundedBox(content, boxWidth)
+	return titleLine + "\n" + box
 }
 
 type sessionTip struct {
@@ -62,9 +63,9 @@ func renderSessionBlock(s sessionTip) string {
 		blockWidth = 76
 	}
 
-	header := lipgloss.NewStyle().Bold(true).Foreground(display.ColorAccent).MarginLeft(2).Render(s.Header)
+	header := lipgloss.NewStyle().Width(blockWidth).Bold(true).Foreground(display.ColorAccent).Align(lipgloss.Center).Render(s.Header)
 
-	metricsLine := lipgloss.NewStyle().Foreground(display.ColorDim).Render(s.Metrics)
+	metricsLine := lipgloss.NewStyle().Foreground(display.ColorDim).Padding(1, 0).Render(s.Metrics)
 	tipLine := lipgloss.NewStyle().Bold(true).Foreground(display.ColorTip).Render("Tip: ") +
 		lipgloss.NewStyle().Foreground(display.ColorTip).Render(s.Tip)
 
@@ -285,8 +286,8 @@ Return ONLY valid JSON. No markdown fences, no preamble, no other text.
 		}
 		return nil
 	}
-	fmt.Printf("  Analyzed sessions in %s\n\n", elapsed)
-	printBox(boxTitle, boxLines)
+	fmt.Printf("%s\n\n", elapsed)
+	fmt.Println(renderBox(boxTitle, boxLines))
 	fmt.Println()
 
 	// Strip markdown fences if present

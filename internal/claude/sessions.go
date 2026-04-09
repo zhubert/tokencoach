@@ -24,13 +24,13 @@ type Message struct {
 }
 
 type Entry struct {
-	Type      string          `json:"type"`
-	Message   Message         `json:"message"`
-	Timestamp string          `json:"timestamp"`
-	SessionID string          `json:"sessionId"`
-	CWD       string          `json:"cwd"`
-	Version   string          `json:"version"`
-	GitBranch string          `json:"gitBranch"`
+	Type      string  `json:"type"`
+	Message   Message `json:"message"`
+	Timestamp string  `json:"timestamp"`
+	SessionID string  `json:"sessionId"`
+	CWD       string  `json:"cwd"`
+	Version   string  `json:"version"`
+	GitBranch string  `json:"gitBranch"`
 }
 
 type Session struct {
