@@ -7,7 +7,7 @@ tokencoach reads your local Claude Code session data (`~/.claude/projects/`) and
 ## Install
 
 ```
-brew install zhubert/taps/tokencoach
+brew install zhubert/tap/tokencoach
 ```
 
 Or build from source:
