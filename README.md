@@ -22,21 +22,7 @@ go build -o tokencoach .
 
 Daily cost breakdown with historical comparison. Shows a bar chart of spending per day with session counts, token usage, and averages compared to your historical baseline.
 
-```
-$ tokencoach stats
-
-  Sun    ░░░░░░░░░░░░░░░░░░░░    $0.00
-  Mon    █░░░░░░░░░░░░░░░░░░░    $1.30  (  2 sessions,   1.1M tokens)
-  Tue    ░░░░░░░░░░░░░░░░░░░░    $0.00
-  Wed    █░░░░░░░░░░░░░░░░░░░    $3.40  (  3 sessions,   4.0M tokens)
-  Thu    ████████████████████   $39.17  ( 44 sessions,  45.6M tokens)
-
-  ╭────────────────────────────────────────────────╮
-  │  Total:         $43.87 across 49 sessions      │
-  │  Avg/session:    $0.90 (historical:    $3.13)  │
-  │  Avg/day:        $8.77 (historical:   $40.33)  │
-  ╰────────────────────────────────────────────────╯
-```
+![tokencoach stats](stats.png)
 
 Use `--days N` to look back further than the current week:
 
@@ -48,47 +34,7 @@ tokencoach stats --days 30
 
 AI-generated tips to reduce your costs. Analyzes your most expensive recent sessions and identifies patterns like retry loops, excessive exploration, or interrupted workflows.
 
-```
-$ tokencoach tips
-
-  ⠼ Analyzing sessions......25.501s
-
-                               7-Day Summary
-  ╭──────────────────────────────────────────────────────────────────────────╮
-  │  Spend: $46.57 (49 sessions)                                             │
-  │  Avg:   $0.95/session (baseline: $3.14)                                  │
-  │  Top 2 sessions = $21.72 (47% of total)                                  │
-  ╰──────────────────────────────────────────────────────────────────────────╯
-
-                    $16.53  Thu 9:14am  ~/Code/insights
-  ╭──────────────────────────────────────────────────────────────────────────╮
-  │  Building a CLI tool — session was interrupted mid-flow after extensive  │
-  │  development work                                                        │
-  │                                                                          │
-  │  280 turns (5.5x your avg of 51), 705% context growth, $16.53 (5.3x      │
-  │  your avg session cost of $3.14), 92 Bash + 56 Edit + 29 Read tool       │
-  │  calls                                                                   │
-  │                                                                          │
-  │  Tip: When context grows past ~300%, start a fresh session with a        │
-  │  focused prompt summarizing only what's needed next — carrying 705%      │
-  │  accumulated context through 280 turns multiplied the cost               │
-  │  dramatically.                                                           │
-  ╰──────────────────────────────────────────────────────────────────────────╯
-
-                      $2.80  Wed 1:14pm  ~/Code/perry
-  ╭──────────────────────────────────────────────────────────────────────────╮
-  │  Changing all TTLs to six months — a well-scoped task that nonetheless   │
-  │  ran long                                                                │
-  │                                                                          │
-  │  10 errors (6x your avg of 1.68), 94 turns but only 12,949 output        │
-  │  tokens (~138 tokens/turn vs your typical 300+), suggesting repeated     │
-  │  failed attempts rather than productive output                           │
-  │                                                                          │
-  │  Tip: When error count spikes above 5, stop and diagnose the root        │
-  │  cause manually before continuing — letting the agent retry 10 times     │
-  │  compounds token cost without fixing the underlying issue.               │
-  ╰──────────────────────────────────────────────────────────────────────────╯
-```
+![tokencoach tips](tips.png)
 
 Flags:
 - `--days N` — number of days to analyze (default: 7)
