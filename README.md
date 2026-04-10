@@ -43,9 +43,19 @@ Flags:
 
 Requires the [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) to be installed.
 
+## Custom Config Directory
+
+By default tokencoach reads session data from `~/.claude/projects/`. If you override Claude Code's config location with `CLAUDE_CONFIG_DIR`, tokencoach will respect that env var automatically.
+
+If the env var isn't set in the shell where you run tokencoach (common when `CLAUDE_CONFIG_DIR` is only set in a wrapper script or specific terminal profile), use `--config-dir`:
+
+```
+tokencoach --config-dir="$HOME/.claude_configs/work" stats
+```
+
 ## How It Works
 
-tokencoach parses the JSONL session logs that Claude Code writes to `~/.claude/projects/`. For each session it extracts token usage (input, output, cache read, cache creation), tool usage, errors, interruptions, and context growth. Costs are computed using per-model pricing for the Opus, Sonnet, and Haiku model families.
+tokencoach parses the JSONL session logs that Claude Code writes to `~/.claude/projects/` (or your custom config directory). For each session it extracts token usage (input, output, cache read, cache creation), tool usage, errors, interruptions, and context growth. Costs are computed using per-model pricing for the Opus, Sonnet, and Haiku model families.
 
 ## License
 
