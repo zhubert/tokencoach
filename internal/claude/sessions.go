@@ -51,7 +51,13 @@ type Session struct {
 	UserPrompts    []string
 }
 
+// ConfigDirOverride can be set by the CLI to override the Claude config directory.
+var ConfigDirOverride string
+
 func ClaudeDir() string {
+	if ConfigDirOverride != "" {
+		return ConfigDirOverride
+	}
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
 		return dir
 	}

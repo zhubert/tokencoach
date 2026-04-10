@@ -39,9 +39,11 @@ func runStats(cmd *cobra.Command, args []string) error {
 	debug("stats: period=%s to %s (%d days)", since.Format("2006-01-02"), today.Format("2006-01-02"), daysInPeriod)
 
 	// Pull all sessions for historical baseline
+	debug("stats: looking for sessions in %s", claude.ClaudeDir())
 	allSessions, err := claude.AllSessions()
 	if err != nil {
-		fmt.Println("No Claude Code session data found. Use Claude Code first, then try again.")
+		fmt.Printf("No Claude Code session data found in %s/projects/.\n", claude.ClaudeDir())
+		fmt.Println("If your config is in a custom location, use --config-dir or set CLAUDE_CONFIG_DIR.")
 		return nil
 	}
 	debug("stats: loaded %d total sessions", len(allSessions))
